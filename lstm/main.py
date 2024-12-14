@@ -1,8 +1,10 @@
+#!/home/widyhu/.conda/envs/speaker/bin/python3
 import torch
 from torch import nn
 import load_data
 import LSTMmodel as lstm
 import torch.optim as optim
+import signal, os
 
 
 def evaluate_model(model, data_loader, criterion):
@@ -18,7 +20,6 @@ def evaluate_model(model, data_loader, criterion):
             loss = criterion(outputs, Y_batch)
             total_loss += loss.item()
     return total_loss / len(data_loader)
-
 
 def main():
     # 加载训练集和测试集和对应的数据加载器
@@ -44,6 +45,7 @@ def main():
 
     # 实例化模型、损失函数和优化器
     model = lstm.LSTMModel(input_size, hidden_size, output_size, num_layers).to('cuda')  # 在GPU上训练
+
     criterion = nn.SmoothL1Loss()  # 均方误差损失函数
     # 回归损失函数
     # torch.nn.MSELoss 用于回归任务，计算预测值与目标值之间的均方误差。
@@ -62,6 +64,7 @@ def main():
         model.train()  # 将模型设置为训练模型
         while True:
             for batch in train_loader:
+                torch.cuda.empty_cache()
                 X_batch = batch['X'].unsqueeze(1).to('cuda')  # 增加序列维度
                 Y_batch = batch['Y'].unsqueeze(1).to('cuda')
 
@@ -78,9 +81,9 @@ def main():
                 # 对于LSTM层，这意味着计算损失相对于LSTM权重和偏置的梯度。LSTM层的反向传播包括计算输入门、遗忘门、输出门和候选记忆细胞的梯度。
                 # 对于全连接层（Linear layer），计算损失相对于线性层权重和偏置的梯度。
                 loss.backward()
-
+ 
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # 添加梯度裁剪，防止梯度爆炸
-
+                
                 # 调用优化器的step函数，使用计算得到的梯度来更新模型参数
                 # 优化器会使用学习率来缩放梯度。
                 # 对于每个参数，优化器会减去相应的梯度乘以学习率，从而更新参数。
@@ -89,10 +92,10 @@ def main():
             if (epoch + 1) % 20 == 0:
                 # 每20epoch使用测试集计算一次损失,并保存模型
                 test_loss = evaluate_model(model, test_loader, criterion)
-                print(f'Epoch [{epoch + 1}], Train Loss: {loss.item():.4f}, Test Loss: {test_loss:.4f}')
+                # print(f'Epoch [{epoch + 1}], Train Loss: {loss.item():.4f}, Test Loss: {test_loss:.4f}')
                 # 保存模型
-                torch.save(model.state_dict(), f'D:/WORK/大三下/影评项目预测/LSTM模型/训练好的模型/lstm_model_{epoch+1}.pth')
-                print(f"训练完成并保存模型(lstm_model_{epoch+1}.pth)。")
+                torch.save(model.state_dict(), f'/home/widyhu/100million/myself/lstm/训练好的模型/lstm_model_{epoch+1}.pth')
+                # print(f"训练完成并保存模型(lstm_model_{epoch+1}.pth)。")
                 model.train()
             else:
                 print(f'Epoch [{epoch + 1}], Train Loss: {loss.item():.4f}')
@@ -102,7 +105,14 @@ def main():
     except KeyboardInterrupt:
         # ctrl+c中止训练
         print("训练已中止。")
+    except Exception as e:
+        print(f"训练异常终止：{e}")
 
 
+def handler(signum, frame):
+    print('Signal handler called with signal', signum)
+    raise OSError("Couldn't open device!")
+
+# signal.signal(signal.SIGKILL, handler)
 if __name__ == "__main__":
     main()

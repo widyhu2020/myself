@@ -12,13 +12,14 @@ class CustomDataset(Dataset):
         self.transform = transform
 
         # 提取特征和目标变量
-        self.X = self.data.drop(columns=['当日票房(万)'])  # 除了目标剩下的都是特征
         self.Y = self.data['当日票房(万)']  # 目标
+        self.X = self.data.drop(columns=['当日票房(万)'], axis=1)  # 除了目标剩下的都是特征
 
         # 使用StandardScaler对数据进行标准化处理，以确保训练过程中的数值稳定性（可选）
         # pd.DataFrame()函数，可以将数据从不同的数据源（如列表、字典、NumPy数组等）转换成数据帧
-        self.scaler = StandardScaler()
-        self.X = pd.DataFrame(self.scaler.fit_transform(self.X), columns=self.X.columns)
+        # 暂时去掉归一化
+        # self.scaler = StandardScaler()
+        # self.X = pd.DataFrame(self.scaler.fit_transform(self.X), columns=self.X.columns)
 
     def __len__(self):
         return len(self.data)
@@ -41,7 +42,7 @@ class CustomDataset(Dataset):
 
 def load_data():
     # 读取CSV文件
-    csv_file = 'D:/WORK/T3low/影评项目预测/数据处理/all_movie_one_year.csv'
+    csv_file = '/home/widyhu/100million/myself/数据处理/all_movie_one_year.csv'
 
     # 创建数据集实例
     custom_dataset = CustomDataset(csv_file)
@@ -54,8 +55,8 @@ def load_data():
     # 创建数据加载器
     # batch_size参数用于指定每个批次（batch）中包含的样本数量。
     # 通常情况下，较大的batch_size可以加快训练速度，但可能会占用更多的内存资源。
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     # 检查数据加载器
     for batch in train_loader:
